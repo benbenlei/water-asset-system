@@ -1,0 +1,99 @@
+"""Data-access layer: thin async functions over the ORM.
+
+Keeping queries here (instead of in the routers) mirrors a repository/
+service split. Every function takes an AsyncSession, like passing a
+DbContext into a repository method.
+"""
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from . import models, schemas
+
+
+async def create_pump(db: AsyncSession, data: schemas.PumpCreate) -> models.Pump:
+    pump = models.Pump(
+        name=data.name,
+        zone=data.zone,
+        flow_rate_lps=data.flow_rate_lps,
+        power_kw=data.power_kw,
+        **({"installed_date": data.installed_date} if data.installed_date else {}),
+    )
+    db.add(pump)
+    await db.commit()
+    await db.refresh(pump)
+    return pump
+
+
+async def create_pipe(db: AsyncSession, data: schemas.PipeCreate) -> models.Pipe:
+    pipe = models.Pipe(
+        name=data.name,
+        zone=data.zone,
+        length_m=data.length_m,
+        diameter_mm=data.diameter_mm,
+        material=data.material,
+        **({"installed_date": data.installed_date} if data.installed_date else {}),
+    )
+    db.add(pipe)
+    await db.commit()
+    await db.refresh(pipe)
+    return pipe
+
+
+async def create_valve(db: AsyncSession, data: schemas.ValveCreate) -> models.Valve:
+    valve = models.Valve(
+        name=data.name,
+        zone=data.zone,
+        valve_kind=data.valve_kind,
+        diameter_mm=data.diameter_mm,
+        **({"installed_date": data.installed_date} if data.installed_date else {}),
+    )
+    db.add(valve)
+    await db.commit()
+    await db.refresh(valve)
+    return valve
+
+
+async def get_asset(db: AsyncSession, asset_id: int) -> models.Asset | None:
+    return await db.get(models.Asset, asset_id)
+
+
+async def get_asset_with_inspections(
+    db: AsyncSession, asset_id: int
+) -> models.Asset | None:
+    """Eager-load inspections so risk_score() can read them under async."""
+    stmt = (
+        select(models.Asset)
+        .where(models.Asset.id == asset_id)
+        .options(selectinload(models.Asset.inspections))
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def list_assets(
+    db: AsyncSession,
+    status: models.AssetStatus | None = None,
+    asset_type: str | None = None,
+) -> list[models.Asset]:
+    stmt = select(models.Asset)
+    if status is not None:
+        stmt = stmt.where(models.Asset.status == status)
+    if asset_type is not None:
+        stmt = stmt.where(models.Asset.asset_type == asset_type)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def add_inspection(
+    db: AsyncSession, asset_id: int, data: schemas.InspectionCreate
+) -> models.Inspection:
+    inspection = models.Inspection(
+        asset_id=asset_id,
+        condition_score=data.condition_score,
+        notes=data.notes,
+    )
+    db.add(inspection)
+    await db.commit()
+    await db.refresh(inspection)
+    return inspection
