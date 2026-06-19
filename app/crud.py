@@ -85,6 +85,18 @@ async def list_assets(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def set_asset_status(
+    db: AsyncSession, asset_id: int, new_status: models.AssetStatus
+) -> models.Asset | None:
+    asset = await db.get(models.Asset, asset_id)
+    if asset is None:
+        return None
+    asset.status = new_status
+    await db.commit()
+    await db.refresh(asset)
+    return asset
+
+
 async def add_inspection(
     db: AsyncSession, asset_id: int, data: schemas.InspectionCreate
 ) -> models.Inspection:

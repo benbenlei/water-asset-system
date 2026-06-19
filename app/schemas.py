@@ -66,6 +66,11 @@ class ValveCreate(BaseModel):
     diameter_mm: int | None = Field(default=None, gt=0)
 
 
+# ----- Status patch ---------------------------------------------------------
+class AssetStatusPatch(BaseModel):
+    status: AssetStatus = Field(description="active | inactive | maintenance")
+
+
 # ----- Health response ------------------------------------------------------
 class AssetHealth(BaseModel):
     asset_id: int

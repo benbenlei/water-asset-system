@@ -44,6 +44,16 @@ async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     return asset
 
 
+@router.patch("/{asset_id}/status", response_model=schemas.AssetRead)
+async def update_asset_status(
+    asset_id: int, data: schemas.AssetStatusPatch, db: AsyncSession = Depends(get_db)
+):
+    asset = await crud.set_asset_status(db, asset_id, data.status)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return asset
+
+
 @router.get("/{asset_id}/health", response_model=schemas.AssetHealth)
 async def get_asset_health(asset_id: int, db: AsyncSession = Depends(get_db)):
     asset = await crud.get_asset_with_inspections(db, asset_id)
