@@ -91,9 +91,10 @@ async def set_asset_status(
     asset = await db.get(models.Asset, asset_id)
     if asset is None:
         return None
+    if asset.status == new_status:
+        return asset
     asset.status = new_status
     await db.commit()
-    await db.refresh(asset)
     return asset
 
 
