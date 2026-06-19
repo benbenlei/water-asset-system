@@ -36,6 +36,18 @@ async def list_assets(
     return await crud.list_assets(db, status=status, asset_type=asset_type)
 
 
+@router.get("/at-risk", response_model=list[schemas.AssetAtRiskRead])
+async def list_at_risk_assets(db: AsyncSession = Depends(get_db)):
+    assets = await crud.list_assets_at_risk(db)
+    return [
+        schemas.AssetAtRiskRead(
+            **schemas.AssetRead.model_validate(a).model_dump(),
+            risk_score=a.risk_score(),
+        )
+        for a in assets
+    ]
+
+
 @router.get("/{asset_id}", response_model=schemas.AssetRead)
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     asset = await crud.get_asset(db, asset_id)
