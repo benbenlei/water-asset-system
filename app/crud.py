@@ -85,6 +85,17 @@ async def list_assets(
     return list((await db.execute(stmt)).scalars().all())
 
 
+async def list_assets_at_risk(db: AsyncSession) -> list[models.Asset]:
+    """Return all assets sorted by risk_score() descending.
+
+    Inspections must be eager-loaded because risk_score() reads
+    self.inspections, and lazy loading fails under async.
+    """
+    stmt = select(models.Asset).options(selectinload(models.Asset.inspections))
+    assets = list((await db.execute(stmt)).scalars().all())
+    return sorted(assets, key=lambda a: a.risk_score(), reverse=True)
+
+
 async def set_asset_status(
     db: AsyncSession, asset_id: int, new_status: models.AssetStatus
 ) -> models.Asset | None:

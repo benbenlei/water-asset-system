@@ -71,6 +71,11 @@ class AssetStatusPatch(BaseModel):
     status: AssetStatus = Field(description="active | inactive | maintenance")
 
 
+# ----- At-risk list response ------------------------------------------------
+class AssetAtRiskRead(AssetRead):
+    risk_score: float
+
+
 # ----- Health response ------------------------------------------------------
 class AssetHealth(BaseModel):
     asset_id: int
