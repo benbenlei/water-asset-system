@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI  # type: ignore[import]
 
 from .database import Base, engine
-from .routers import assets, inspections
+from .routers import assets, inspections, maintenance_jobs
 
 
 @asynccontextmanager
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Water Asset System", version="0.1.0", lifespan=lifespan)
 app.include_router(assets.router)
 app.include_router(inspections.router)
+app.include_router(maintenance_jobs.router)
 
 
 @app.get("/health", tags=["meta"])

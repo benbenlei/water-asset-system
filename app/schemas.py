@@ -10,7 +10,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import AssetStatus
+from .models import AssetStatus, JobStatus, Outcome
 
 
 # ----- Inspections ---------------------------------------------------------
@@ -74,6 +74,33 @@ class AssetStatusPatch(BaseModel):
 # ----- At-risk list response ------------------------------------------------
 class AssetAtRiskRead(AssetRead):
     risk_score: float
+
+
+# ----- Maintenance jobs -----------------------------------------------------
+class MaintenanceJobCreate(BaseModel):
+    assigned_to: str
+    scheduled_date: date
+    inspection_id: int | None = None
+
+
+class MaintenanceJobRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    asset_id: int
+    inspection_id: int | None
+    assigned_to: str
+    scheduled_date: date
+    status: JobStatus
+    outcome: Outcome | None
+    completed_at: datetime | None
+    post_job_condition: int | None
+
+
+class JobStatusPatch(BaseModel):
+    status: JobStatus
+    outcome: Outcome | None = None
+    post_job_condition: int | None = Field(default=None, ge=1, le=5)
 
 
 # ----- Health response ------------------------------------------------------
