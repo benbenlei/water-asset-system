@@ -1,8 +1,8 @@
 # Water Asset System
 
 A small FastAPI + SQLAlchemy service for tracking water-utility assets
-(pumps, pipes, valves) and their inspections. Built as a Python refresher
-that exercises eight core topics in one realistic project.
+(pumps, pipes, valves), their inspections, and maintenance jobs. Built as a
+Python refresher that exercises eight core topics in one realistic project.
 
 ## Quick start (Windows)
 
@@ -34,13 +34,39 @@ On macOS/Linux the only difference is `source .venv/bin/activate`.
 
 ```
 GET    /health
+
 POST   /assets/pumps          POST /assets/pipes    POST /assets/valves
 GET    /assets                (filters: ?status= &asset_type=)
+GET    /assets/at-risk        -> all assets sorted by risk_score() desc
 GET    /assets/{id}
+PATCH  /assets/{id}/status    -> move to active | inactive | maintenance
 GET    /assets/{id}/health    -> latest condition + polymorphic risk score
+
 POST   /assets/{id}/inspections
 GET    /assets/{id}/inspections
+
+POST   /assets/{id}/maintenance-jobs
+GET    /assets/{id}/maintenance-jobs
+GET    /maintenance-jobs/{id}
+PATCH  /maintenance-jobs/{id}/status   -> lifecycle transitions (see below)
 ```
+
+### MaintenanceJob lifecycle
+
+Jobs move through `scheduled → in_progress → completed | cancelled`.
+`completed` and `cancelled` are terminal — no further transitions.
+
+| Field | Notes |
+|---|---|
+| `assigned_to` | Free-text name of the responsible technician |
+| `scheduled_date` | Date the work is planned |
+| `outcome` | Required on completion: `resolved`, `partially_resolved`, or `deferred` |
+| `post_job_condition` | Optional 1–5 score recorded by the technician on completion |
+| `completed_at` | Set automatically when the job transitions to `completed` |
+
+When `post_job_condition` is set on a completed job, it overrides the
+inspection-based condition in `risk_score()` — but only until a newer
+inspection is recorded. After that the inspection takes precedence again.
 
 ## Notes for a C# developer
 
@@ -57,8 +83,7 @@ GET    /assets/{id}/inspections
 
 ## Suggested extensions (to keep learning)
 
-1. Add `PATCH /assets/{id}/status` to move an asset to `maintenance`.
-2. Add a `MaintenanceJob` model (one-to-many off `Asset`) and a router for it.
-3. Add Alembic and generate your first migration.
-4. Add a `GET /assets/at-risk` endpoint that returns assets sorted by `risk_score()`.
-5. Swap SQLite for your MySQL Workbench schema and re-run the tests.
+1. Add Alembic and generate your first migration.
+2. Swap SQLite for your MySQL Workbench schema and re-run the tests.
+3. Add pagination (`limit`/`offset`) to `GET /assets/{id}/maintenance-jobs`.
+4. Add a `Technician` model and replace the free-text `assigned_to` field.

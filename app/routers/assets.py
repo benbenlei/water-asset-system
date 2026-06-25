@@ -39,12 +39,14 @@ async def list_assets(
 @router.get("/at-risk", response_model=list[schemas.AssetAtRiskRead])
 async def list_at_risk_assets(db: AsyncSession = Depends(get_db)):
     assets = await crud.list_assets_at_risk(db)
+    # Compute risk_score() once per asset — used for both sort key and response.
+    scored = sorted(((a, a.risk_score()) for a in assets), key=lambda p: p[1], reverse=True)
     return [
         schemas.AssetAtRiskRead(
             **schemas.AssetRead.model_validate(a).model_dump(),
-            risk_score=a.risk_score(),
+            risk_score=score,
         )
-        for a in assets
+        for a, score in scored
     ]
 
 
