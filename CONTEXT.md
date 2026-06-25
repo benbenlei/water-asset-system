@@ -52,5 +52,8 @@ _Avoid_: planned date, due date
 **completed_at**: The timestamp when a MaintenanceJob reached `completed` or `cancelled`.
 _Avoid_: finished at, end time
 
+**InvalidTransition**: A domain exception raised when a requested JobStatus change violates the lifecycle rules — e.g. exiting a terminal state, or completing without an outcome. Translates to HTTP 422 at the application boundary.
+_Avoid_: ValidationError, StateError
+
 **post_job_condition**: An optional 1–5 condition score recorded by the technician on job completion. When present, overrides Inspection-based condition in risk_score() for the asset.
 _Avoid_: post-maintenance score, outcome score

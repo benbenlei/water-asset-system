@@ -38,6 +38,10 @@ class Outcome(str, enum.Enum):
     DEFERRED = "deferred"
 
 
+class InvalidTransition(ValueError):
+    pass
+
+
 class Inspection(Base):
     __tablename__ = "inspections"
 
@@ -72,6 +76,38 @@ class MaintenanceJob(Base):
 
     asset: Mapped[Asset] = relationship(back_populates="maintenance_jobs")
     inspection: Mapped[Inspection | None] = relationship()
+
+    def transition_to(
+        self,
+        new_status: JobStatus,
+        *,
+        outcome: Outcome | None = None,
+        post_job_condition: int | None = None,
+    ) -> None:
+        terminal = {JobStatus.COMPLETED, JobStatus.CANCELLED}
+        if self.status in terminal:
+            raise InvalidTransition(
+                f"Cannot transition out of terminal state '{self.status}'"
+            )
+        if new_status == JobStatus.COMPLETED and outcome is None:
+            raise InvalidTransition(
+                "outcome is required when transitioning to 'completed'"
+            )
+        if outcome is not None and new_status != JobStatus.COMPLETED:
+            raise InvalidTransition(
+                "outcome can only be set when transitioning to 'completed'"
+            )
+        if post_job_condition is not None and new_status != JobStatus.COMPLETED:
+            raise InvalidTransition(
+                "post_job_condition can only be set when transitioning to 'completed'"
+            )
+        self.status = new_status
+        if new_status in terminal:
+            self.completed_at = datetime.now(timezone.utc)
+        if outcome is not None:
+            self.outcome = outcome
+        if post_job_condition is not None:
+            self.post_job_condition = post_job_condition
 
 
 class Asset(Base):

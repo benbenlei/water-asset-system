@@ -50,10 +50,7 @@ async def update_job_status(
     data: schemas.JobStatusPatch,
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        job = await crud.update_job_status(db, job_id, data)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    job = await crud.update_job_status(db, job_id, data)
     if job is None:
         raise HTTPException(status_code=404, detail="MaintenanceJob not found")
     return job

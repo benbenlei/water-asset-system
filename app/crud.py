@@ -168,29 +168,10 @@ async def update_job_status(
     job = await db.get(models.MaintenanceJob, job_id)
     if job is None:
         return None
-
-    terminal = {models.JobStatus.COMPLETED, models.JobStatus.CANCELLED}
-    if job.status in terminal:
-        raise ValueError(f"Cannot transition out of terminal state '{job.status}'")
-
-    if data.status == models.JobStatus.COMPLETED and data.outcome is None:
-        raise ValueError("outcome is required when transitioning to 'completed'")
-
-    if data.outcome is not None and data.status != models.JobStatus.COMPLETED:
-        raise ValueError("outcome can only be set when transitioning to 'completed'")
-
-    if data.post_job_condition is not None and data.status != models.JobStatus.COMPLETED:
-        raise ValueError(
-            "post_job_condition can only be set when transitioning to 'completed'"
-        )
-
-    job.status = data.status
-    if data.status == models.JobStatus.COMPLETED:
-        job.completed_at = datetime.now(timezone.utc)
-    if data.outcome is not None:
-        job.outcome = data.outcome
-    if data.post_job_condition is not None:
-        job.post_job_condition = data.post_job_condition
-
+    job.transition_to(
+        data.status,
+        outcome=data.outcome,
+        post_job_condition=data.post_job_condition,
+    )
     await db.commit()
     return job

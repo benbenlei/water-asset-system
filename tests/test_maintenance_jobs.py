@@ -158,7 +158,7 @@ async def test_completing_without_outcome_returns_422(client):
     assert resp.status_code == 422
 
 
-async def test_cancelled_job_has_no_completed_at(client):
+async def test_cancelled_job_sets_completed_at(client):
     asset_id = await _make_pump(client)
     job_id = (await _make_job(client, asset_id))["id"]
 
@@ -166,7 +166,7 @@ async def test_cancelled_job_has_no_completed_at(client):
         f"/maintenance-jobs/{job_id}/status", json={"status": "cancelled"}
     )
     assert resp.status_code == 200
-    assert resp.json()["completed_at"] is None
+    assert resp.json()["completed_at"] is not None
 
 
 async def test_completed_job_post_condition_drives_risk_score(client):
