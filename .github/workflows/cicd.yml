@@ -37,6 +37,9 @@ jobs:
       - name: Run Tests
         run: |
           pytest
+      - name: PR reviews
+        run: |
+          claude -p "review this pr"
 
   # --- CONTINUOUS DEPLOYMENT (CD) STAGE ---
   deploy:
