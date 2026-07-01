@@ -36,9 +36,33 @@ async def list_assets(
     return await crud.list_assets(db, status=status, asset_type=asset_type)
 
 
+@router.get("/at-risk", response_model=list[schemas.AssetAtRiskRead])
+async def list_at_risk_assets(db: AsyncSession = Depends(get_db)):
+    assets = await crud.list_assets_at_risk(db)
+    # Compute risk_score() once per asset — used for both sort key and response.
+    scored = sorted(((a, a.risk_score()) for a in assets), key=lambda p: p[1], reverse=True)
+    return [
+        schemas.AssetAtRiskRead(
+            **schemas.AssetRead.model_validate(a).model_dump(),
+            risk_score=score,
+        )
+        for a, score in scored
+    ]
+
+
 @router.get("/{asset_id}", response_model=schemas.AssetRead)
 async def get_asset(asset_id: int, db: AsyncSession = Depends(get_db)):
     asset = await crud.get_asset(db, asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return asset
+
+
+@router.patch("/{asset_id}/status", response_model=schemas.AssetRead)
+async def update_asset_status(
+    asset_id: int, data: schemas.AssetStatusPatch, db: AsyncSession = Depends(get_db)
+):
+    asset = await crud.set_asset_status(db, asset_id, data.status)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset

@@ -70,3 +70,45 @@ async def test_health_no_inspections_defaults_to_excellent(client):
     # No inspections -> latest_condition defaults to 1, valve uses base score.
     assert health["latest_condition"] == 1
     assert health["risk_score"] == 10.0
+
+
+async def test_patch_status_updates_and_returns_asset(client):
+    asset_id = (await client.post("/assets/pumps", json={"name": "P"})).json()["id"]
+    resp = await client.patch(f"/assets/{asset_id}/status", json={"status": "maintenance"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "maintenance"
+
+
+async def test_patch_status_not_found(client):
+    resp = await client.patch("/assets/9999/status", json={"status": "maintenance"})
+    assert resp.status_code == 404
+
+
+async def test_patch_status_missing_body_returns_422(client):
+    asset_id = (await client.post("/assets/pumps", json={"name": "P"})).json()["id"]
+    resp = await client.patch(f"/assets/{asset_id}/status", json={})
+    assert resp.status_code == 422
+
+
+async def test_patch_status_invalid_value_returns_422(client):
+    asset_id = (await client.post("/assets/pumps", json={"name": "P"})).json()["id"]
+    resp = await client.patch(f"/assets/{asset_id}/status", json={"status": "broken"})
+    assert resp.status_code == 422
+
+async def test_at_risk_returns_assets_sorted_by_risk(client):
+    # High-flow pump (risk=60) should rank above uninspected valve (risk=10)
+    await client.post("/assets/pumps", json={"name": "Big", "flow_rate_lps": 200})
+    pump_id = (await client.get("/assets", params={"asset_type": "pump"})).json()[0]["id"]
+    await client.post(f"/assets/{pump_id}/inspections", json={"condition_score": 4})
+    await client.post("/assets/valves", json={"name": "V"})
+
+    resp = await client.get("/assets/at-risk")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data[0]["risk_score"] >= data[-1]["risk_score"]
+    assert "risk_score" in data[0]
+
+async def test_at_risk_empty(client):
+    resp = await client.get("/assets/at-risk")
+    assert resp.status_code == 200
+    assert resp.json() == []
